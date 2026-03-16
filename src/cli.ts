@@ -224,6 +224,16 @@ function addTaskCommands(program: Command): void {
 
 // ── Entry point ──────────────────────────────────────────────────────────────
 
+function addMcpCommand(program: Command): void {
+  program
+    .command("mcp")
+    .description("start MCP server over stdio (for Claude Desktop / claude mcp add)")
+    .action(async () => {
+      const { startMcpServer } = await import("./mcp.js");
+      await startMcpServer(program.opts<GlobalOptions>());
+    });
+}
+
 function makeProgram(): Command {
   const program = new Command();
   program
@@ -244,6 +254,7 @@ function makeProgram(): Command {
   addMediaCommands(program, "image");
   addMediaCommands(program, "video");
   addTaskCommands(program);
+  addMcpCommand(program);
 
   return program;
 }

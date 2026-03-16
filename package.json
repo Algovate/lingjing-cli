@@ -4,7 +4,8 @@
   "description": "TypeScript CLI for JDCloud Lingjing APIs",
   "type": "module",
   "bin": {
-    "lingjing": "./dist/cli.js"
+    "lingjing": "./dist/cli.js",
+    "lingjing-mcp": "./dist/mcp.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -15,7 +16,9 @@
     "node": ">=18"
   },
   "dependencies": {
-    "commander": "^14.0.1"
+    "commander": "^14.0.1",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

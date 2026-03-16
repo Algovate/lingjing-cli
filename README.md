@@ -6,6 +6,7 @@
 - `video`: 视频生成
 - `preset`: 模型预设查询
 - `task`: 任务查询与轮询
+- `mcp`: 以 stdio MCP 服务器模式启动（供 Claude Desktop / claude mcp add 使用）
 
 ## 安装
 
@@ -122,3 +123,53 @@ node dist/cli.js video \
   --set duration=10 \
   --set aspect_ratio=9:16
 ```
+
+## MCP 服务器
+
+### 启动方式
+
+```bash
+# 直接运行
+LINGJING_API_KEY=xxx node dist/mcp.js
+
+# 或通过 CLI 子命令
+LINGJING_API_KEY=xxx node dist/cli.js mcp
+```
+
+### 注册到 Claude Code
+
+```bash
+claude mcp add lingjing -- node /path/to/dist/mcp.js
+```
+
+在 MCP 服务器的环境变量中设置 `LINGJING_API_KEY`，也可通过 `LINGJING_ENV_FILE` 指定 env 文件路径：
+
+```bash
+LINGJING_ENV_FILE=/path/to/.env node dist/mcp.js
+```
+
+### MCP Tools
+
+| Tool | 说明 |
+|---|---|
+| `list_presets` | 列出预设，可按 `capability` / `provider` 过滤 |
+| `generate_image` | 提交图片任务并等待结果 |
+| `generate_video` | 提交视频任务并等待结果（默认超时 600s）|
+
+#### `list_presets`
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| `capability` | `image` \| `text-to-video` \| `image-to-video` \| `reference-to-video` | 按能力过滤（可选） |
+| `provider` | `doubao` \| `hailuo` \| `kling` \| `paiwo` \| `vidu` | 按供应商过滤（可选） |
+
+#### `generate_image` / `generate_video`
+
+| 参数 | 类型 | 默认 | 说明 |
+|---|---|---|---|
+| `preset` | string | — | 预设 key，如 `doubao-seedream-4-0` |
+| `params` | object | — | 任务参数对象 |
+| `interval` | number | 5 | 轮询间隔（秒） |
+| `timeout` | number | 300 / 600 | 最大等待秒数 |
+
+返回结构：`{ submit, result, urls }`，`urls` 为提取出的图片/视频直链列表。
