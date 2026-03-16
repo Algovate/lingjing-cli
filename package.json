@@ -35,8 +35,8 @@
   },
   "homepage": "https://github.com/Algovate/lingjing-cli#readme",
   "dependencies": {
-    "commander": "^14.0.1",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "commander": "^14.0.1",
     "zod": "^3.25.0"
   },
   "devDependencies": {
