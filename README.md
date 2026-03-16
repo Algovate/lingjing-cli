@@ -3,176 +3,205 @@
 [![npm version](https://img.shields.io/npm/v/lingjing-cli)](https://www.npmjs.com/package/lingjing-cli)
 [![npm downloads](https://img.shields.io/npm/dm/lingjing-cli)](https://www.npmjs.com/package/lingjing-cli)
 
-按资源拆分的命令体系：
+CLI & MCP Server for JDCloud Lingjing image and video generation APIs. 
 
-- `image`: 图片生成
-- `video`: 视频生成
-- `preset`: 模型预设查询
-- `task`: 任务查询与轮询
-- `mcp`: 以 stdio MCP 服务器模式启动（供 Claude Desktop / claude mcp add 使用）
-
-## 安装
+## 📦 Installation
 
 ```bash
-npm install
-npm run build
+# Install globally
+npm install -g lingjing-cli
+
+# Or use directly via npx
+npx lingjing-cli
 ```
 
-## 全局参数
+*If you are running from the source code locally, you can use `npm run build` and then run `node dist/cli.js` instead of `lingjing`.*
+
+## ⚙️ Configuration
+
+Set your API key via environment variables:
 
 ```bash
-node dist/cli.js [global-options] <command> [options]
+export LINGJING_API_KEY="your_api_key_here"
+# Alternatively, you can use JDCLOUD_API_KEY
 ```
 
-- `--env-file <path>`: 指定 env 文件
-- `--skip-env`: 禁用自动加载 `.env`
-- `--api-key <key>`: 覆盖 API Key
-- `--base-url <url>`: 覆盖域名（默认 `https://model.jdcloud.com`）
-- `--request-id <id>`: 指定请求 ID
-- `--json`: JSON 输出模式
+You can also use a `.env` file in the current directory, or specify one via `--env-file <path>`.
 
-环境变量：
-
-- `LINGJING_API_KEY` / `JDCLOUD_API_KEY`
-- `LINGJING_BASE_URL`
-
-## image
-
-提交图片任务并等待结果：
+### Global CLI Options
 
 ```bash
-# 豆包 SeedDream 4.0
-node dist/cli.js image \
+lingjing [global-options] <command> [options]
+```
+
+- `--env-file <path>`: Load env vars from a specific file
+- `--skip-env`: Disable auto-loading `.env`
+- `--api-key <key>`, `-k`: Override API Key
+- `--base-url <url>`: Override API base URL (default: `https://model.jdcloud.com`)
+- `--request-id <id>`: Specify a custom `x-jdcloud-request-id` header
+- `--json`: Output pure JSON (useful for pipelines and parsing)
+
+## 🚀 CLI Commands
+
+### 1. Model Presets (`preset`)
+
+See the available, ready-to-use model presets:
+
+```bash
+# List all presets
+lingjing preset list
+
+# Filter by type (image | video)
+lingjing preset list --type image
+
+# Filter by provider (e.g., kling, doubao, vidu, hailuo)
+lingjing preset list --provider kling --type video
+
+# View details of a specific preset
+lingjing preset show doubao-seedream-4-0
+```
+
+### 2. Image Generation (`image`)
+
+Submit an image generation task and wait for the result automatically:
+
+```bash
+# Doubao SeedDream 4.0
+lingjing image \
   --preset doubao-seedream-4-0 \
   --params '{"prompt":"一只戴墨镜的猫","size":"2048x2048","taskNum":1}'
 
-# Kling 图像生成
-node dist/cli.js image \
+# Kling Image Generation
+lingjing image \
   --preset kling-v2-1-image \
   --params '{"prompt":"城市夜景，赛博朋克风格","aspect_ratio":"16:9"}'
 
-# 只提交不等待（返回 genTaskId）
-node dist/cli.js image \
+# Submit only (without waiting/polling), returns genTaskId
+lingjing image \
   --preset doubao-seedream-4-0 \
   --params '{"prompt":"山间晨雾"}' \
   --no-wait
 ```
 
-## video
+### 3. Video Generation (`video`)
 
-提交视频任务并等待结果：
+Submit a video generation task and wait for the result:
 
 ```bash
-# 文生视频：Kling V3
-node dist/cli.js video \
+# Text-to-Video: Kling V3
+lingjing video \
   --preset kling-v3-ttv \
   --params '{"prompt":"海边日落，海浪轻拍礁石","duration":"5","mode":"pro","aspect_ratio":"16:9"}'
 
-# 文生视频：豆包 Seedance
-node dist/cli.js video \
+# Text-to-Video: Doubao Seedance 1.5 Pro
+lingjing video \
   --preset doubao-seedance-1-5-pro-ttv \
   --params '{"prompt":"雪山脚下奔跑的骏马","aspect_ratio":"16:9"}'
 
-# 图生视频：Kling V3（需提供参考图）
-node dist/cli.js video \
+# Image-to-Video: Kling V3 (Requires a reference image)
+lingjing video \
   --preset kling-v3-ptv \
   --params '{"prompt":"人物转身微笑","image_url":"https://example.com/ref.jpg","duration":"5"}'
 
-# 自定义轮询间隔和超时
-node dist/cli.js video \
+# Custom polling interval and timeout
+lingjing video \
   --preset vidu-q2-ttv \
   --params '{"prompt":"极光下的雪原"}' \
   --interval 10 --timeout 300
-
-# 只提交不等待
-node dist/cli.js video \
-  --preset kling-v3-ttv \
-  --params '{"prompt":"瀑布飞流直下"}' \
-  --no-wait
 ```
 
-## preset
-
+**Overriding specific parameters inline (`--set`)**:
+You can use `--set key=value` to override `params` fields easily:
 ```bash
-node dist/cli.js preset list
-node dist/cli.js preset list --type image
-node dist/cli.js preset list --type video --provider kling
-node dist/cli.js preset show doubao-seedream-4-0
-```
-
-## task
-
-```bash
-node dist/cli.js task get <genTaskId>
-node dist/cli.js task wait <genTaskId> --interval 5 --timeout 600
-```
-
-状态规则：
-
-- `taskStatus=4` 成功
-- `taskStatus=2` 失败
-
-## params 说明
-
-- `--params` / `--params-file` 是 API body 里的 `params` 对象。
-- CLI 会自动组装成 `{ apiId, params }` 调用提交接口。
-- 使用 `--preset` 时，会自动补 `model` 或 `model_name`（若未提供）。
-- `--set key=value` 可覆盖 `params` 字段（可重复）：
-
-```bash
-node dist/cli.js video \
+lingjing video \
   --preset kling-v3-ttv \
   --params '{"prompt":"星空延时摄影"}' \
   --set duration=10 \
   --set aspect_ratio=9:16
 ```
 
-## MCP 服务器
+### 4. Task Management (`task`)
 
-### 启动方式
-
-```bash
-# 直接运行
-LINGJING_API_KEY=xxx node dist/mcp.js
-
-# 或通过 CLI 子命令
-LINGJING_API_KEY=xxx node dist/cli.js mcp
-```
-
-### 注册到 Claude Code
+If you submitted a task using `--no-wait`, you can query or poll its status later using its `genTaskId`:
 
 ```bash
-claude mcp add lingjing -- node /path/to/dist/mcp.js
+# Query the current status of a task
+lingjing task get <genTaskId>
+
+# Polling a task until it completes or times out
+lingjing task wait <genTaskId> --interval 5 --timeout 600
 ```
 
-在 MCP 服务器的环境变量中设置 `LINGJING_API_KEY`，也可通过 `LINGJING_ENV_FILE` 指定 env 文件路径：
+Task Status Reference:
+- `taskStatus=4`: Success
+- `taskStatus=2`: Failure
 
+---
+
+## 🤖 MCP Server
+
+`lingjing-cli` can operate as an [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server via stdio.
+
+### Start MCP Server
 ```bash
-LINGJING_ENV_FILE=/path/to/.env node dist/mcp.js
+# Run globally installed version:
+LINGJING_API_KEY=your_key lingjing-mcp
+
+# Or via the CLI subcommand:
+LINGJING_API_KEY=your_key lingjing mcp
+
+# Load from an explicitly defined .env file:
+LINGJING_ENV_FILE=/path/to/.env lingjing-mcp
 ```
 
-### MCP Tools
+### Claude Desktop Integration
 
-| Tool | 说明 |
+You can easily add the MCP server to Claude Code or Claude Desktop.
+
+**For Claude Code:**
+```bash
+claude mcp add lingjing-cli -- npx -y lingjing-cli mcp
+```
+*(Make sure to configure your `LINGJING_API_KEY` in your environment or via the `LINGJING_ENV_FILE` variable)*
+
+**For Claude Desktop `claude_desktop_config.json`:**
+```json
+{
+  "mcpServers": {
+    "lingjing": {
+      "command": "npx",
+      "args": ["-y", "lingjing-cli", "mcp"],
+      "env": {
+        "LINGJING_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+### Available MCP Tools
+
+| Tool | Description |
 |---|---|
-| `list_presets` | 列出预设，可按 `capability` / `provider` 过滤 |
-| `generate_image` | 提交图片任务并等待结果 |
-| `generate_video` | 提交视频任务并等待结果（默认超时 600s）|
+| `list_presets` | List and find available models, can be filtered by `capability` and `provider`. |
+| `generate_image` | Submit an image generation task and wait for the result automatically. |
+| `generate_video` | Submit a video generation task and wait for the result automatically (default timeout 600s). |
 
 #### `list_presets`
-
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 |---|---|---|
-| `capability` | `image` \| `text-to-video` \| `image-to-video` \| `reference-to-video` | 按能力过滤（可选） |
-| `provider` | `doubao` \| `hailuo` \| `kling` \| `paiwo` \| `vidu` | 按供应商过滤（可选） |
+| `capability` | `image` \| `text-to-video` \| `image-to-video` \| `reference-to-video` | Filter by capability (optional) |
+| `provider` | `doubao` \| `hailuo` \| `kling` \| `paiwo` \| `vidu` | Filter by provider (optional) |
 
 #### `generate_image` / `generate_video`
-
-| 参数 | 类型 | 默认 | 说明 |
+| Parameter | Type | Default | Description |
 |---|---|---|---|
-| `preset` | string | — | 预设 key，如 `doubao-seedream-4-0` |
-| `params` | object | — | 任务参数对象 |
-| `interval` | number | 5 | 轮询间隔（秒） |
-| `timeout` | number | 300 / 600 | 最大等待秒数 |
+| `preset` | string | — | The preset key, e.g., `doubao-seedream-4-0` |
+| `params` | object | — | Task parameter object (e.g., prompt, aspect_ratio) |
+| `interval` | number | 5 | Polling interval in seconds |
+| `timeout` | number | 300 / 600 | Max waiting time in seconds |
 
-返回结构：`{ submit, result, urls }`，`urls` 为提取出的图片/视频直链列表。
+Returns: `{ submit, result, urls }`, where `urls` easily provides the extracted direct links to the generated media.
+
+## License
+MIT
