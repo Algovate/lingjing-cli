@@ -1,5 +1,8 @@
 # lingjing-cli
 
+[![npm version](https://img.shields.io/npm/v/lingjing-cli)](https://www.npmjs.com/package/lingjing-cli)
+[![npm downloads](https://img.shields.io/npm/dm/lingjing-cli)](https://www.npmjs.com/package/lingjing-cli)
+
 按资源拆分的命令体系：
 
 - `image`: 图片生成

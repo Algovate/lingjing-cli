@@ -1,20 +1,39 @@
 {
   "name": "lingjing-cli",
   "version": "0.1.0",
-  "description": "TypeScript CLI for JDCloud Lingjing APIs",
+  "description": "CLI & MCP server for JDCloud Lingjing image/video generation APIs",
   "type": "module",
   "bin": {
     "lingjing": "./dist/cli.js",
     "lingjing-mcp": "./dist/mcp.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/cli.ts",
-    "start": "node dist/cli.js"
+    "start": "node dist/cli.js",
+    "prepublishOnly": "npm run build"
   },
   "engines": {
     "node": ">=18"
   },
+  "keywords": [
+    "jdcloud",
+    "lingjing",
+    "image-generation",
+    "video-generation",
+    "mcp",
+    "model-context-protocol",
+    "cli"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Algovate/lingjing-cli.git"
+  },
+  "homepage": "https://github.com/Algovate/lingjing-cli#readme",
   "dependencies": {
     "commander": "^14.0.1",
     "@modelcontextprotocol/sdk": "^1.0.0",
