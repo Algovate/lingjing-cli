@@ -170,7 +170,7 @@ claude mcp add lingjing-cli -- npx -y lingjing-cli mcp
   "mcpServers": {
     "lingjing": {
       "command": "npx",
-      "args": ["-y", "lingjing-cli", "mcp"],
+      "args": ["-y", "lingjing", "mcp"],
       "env": {
         "LINGJING_API_KEY": "your_api_key_here"
       }
