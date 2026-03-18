@@ -5,12 +5,13 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { initEnv, type GlobalOptions } from "./env.js";
 import { submitTask, waitTask, extractUrls, getInnerResult } from "./api.js";
-import { MODEL_PRESETS, getPresetByKey } from "./presets.js";
+import { MODEL_PRESETS, getPresetByKey, supportsCapabilityInput, supportsCapabilityParam } from "./presets.js";
 
 type Obj = Record<string, unknown>;
 
 const CAPABILITY_VALUES = ["image", "text-to-video", "image-to-video", "reference-to-video"] as const;
 const PROVIDER_VALUES = ["doubao", "hailuo", "kling", "paiwo", "vidu"] as const;
+const INPUT_VALUES = ["text_prompt", "image_url", "image_list", "ref_video"] as const;
 
 function buildGlobal(overrideOpts?: Partial<GlobalOptions>): GlobalOptions {
   initEnv({ envFile: process.env.LINGJING_ENV_FILE });
@@ -29,18 +30,95 @@ function registerTools(server: McpServer, global: GlobalOptions): void {
   server.registerTool(
     "list_presets",
     {
-      description: "List available model presets, optionally filtered by capability or provider",
+      description: "List available model presets with full capability specs",
       inputSchema: {
         capability: z.enum(CAPABILITY_VALUES).optional().describe("filter by capability"),
         provider: z.enum(PROVIDER_VALUES).optional().describe("filter by provider"),
+        supportsParam: z.string().optional().describe("filter by supported parameter"),
+        supportsInput: z.enum(INPUT_VALUES).optional().describe("filter by supported input"),
+        compact: z.boolean().optional().default(false).describe("compact output mode"),
       },
     },
-    async ({ capability, provider }) => {
+    async ({ capability, provider, supportsParam, supportsInput, compact }) => {
       const results = MODEL_PRESETS.filter((p) => {
         if (capability && p.capability !== capability) return false;
         if (provider && p.provider !== provider) return false;
+        if (supportsParam && !supportsCapabilityParam(p, supportsParam)) return false;
+        if (supportsInput && !supportsCapabilityInput(p, supportsInput)) return false;
         return true;
+      }).map((preset) => {
+        if (!compact) return preset;
+        return {
+          key: preset.key,
+          apiId: preset.apiId,
+          provider: preset.provider,
+          capability: preset.capability,
+          inputs: preset.capSpec.inputs,
+          supportsParams: Object.keys(preset.capSpec.params),
+          summary: preset.capSpec.summary,
+        };
       });
+      return { content: [toTextContent(results)] };
+    }
+  );
+
+  server.registerTool(
+    "get_preset_capability",
+    {
+      description: "Get complete capability details for one preset",
+      inputSchema: {
+        preset: z.string().describe("preset key"),
+      },
+    },
+    async ({ preset: presetKey }) => {
+      const preset = getPresetByKey(presetKey);
+      if (!preset) return errorContent(`unknown preset: ${presetKey}`);
+      return {
+        content: [
+          toTextContent({
+            key: preset.key,
+            provider: preset.provider,
+            capability: preset.capability,
+            summary: preset.capSpec.summary,
+            capSpec: preset.capSpec,
+          }),
+        ],
+      };
+    }
+  );
+
+  server.registerTool(
+    "find_presets_by_capability",
+    {
+      description: "Find presets by capability input/parameter support",
+      inputSchema: {
+        capability: z.enum(CAPABILITY_VALUES).optional().describe("filter by capability"),
+        provider: z.enum(PROVIDER_VALUES).optional().describe("filter by provider"),
+        supportsParam: z.string().optional().describe("filter by supported parameter"),
+        supportsInput: z.enum(INPUT_VALUES).optional().describe("filter by supported input"),
+        compact: z.boolean().optional().default(false).describe("compact output mode"),
+      },
+    },
+    async ({ capability, provider, supportsParam, supportsInput, compact }) => {
+      const results = MODEL_PRESETS.filter((preset) => {
+        if (capability && preset.capability !== capability) return false;
+        if (provider && preset.provider !== provider) return false;
+        if (supportsParam && !supportsCapabilityParam(preset, supportsParam)) return false;
+        if (supportsInput && !supportsCapabilityInput(preset, supportsInput)) return false;
+        return true;
+      }).map((preset) => {
+        if (!compact) return preset;
+        return {
+          key: preset.key,
+          apiId: preset.apiId,
+          provider: preset.provider,
+          capability: preset.capability,
+          inputs: preset.capSpec.inputs,
+          supportsParams: Object.keys(preset.capSpec.params),
+          summary: preset.capSpec.summary,
+        };
+      });
+
       return { content: [toTextContent(results)] };
     }
   );

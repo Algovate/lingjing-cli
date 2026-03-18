@@ -2,7 +2,14 @@
 
 import { Command, InvalidArgumentError } from "commander";
 import { readFileSync } from "node:fs";
-import { MODEL_PRESETS, getPresetByKey, type ModelPreset } from "./presets.js";
+import {
+  CAPABILITY_INPUT_TYPES,
+  MODEL_PRESETS,
+  getPresetByKey,
+  supportsCapabilityInput,
+  supportsCapabilityParam,
+  type ModelPreset,
+} from "./presets.js";
 import { initEnv, type GlobalOptions } from "./env.js";
 import {
   submitTask,
@@ -133,14 +140,46 @@ function printWaitResult(
 
 // ── Commands ─────────────────────────────────────────────────────────────────
 
-function filterPresets(kind?: MediaKind, provider?: string, capability?: string): ModelPreset[] {
+type PresetListOptions = {
+  type?: string;
+  provider?: string;
+  capability?: string;
+  supportsParam?: string;
+  supportsInput?: string;
+  compact?: boolean;
+};
+
+function filterPresets(opts: PresetListOptions): ModelPreset[] {
+  const kind = opts.type as MediaKind | undefined;
   return MODEL_PRESETS.filter((p) => {
     if (kind === "image" && p.capability !== "image") return false;
     if (kind === "video" && p.capability === "image") return false;
-    if (provider && p.provider !== provider) return false;
-    if (capability && p.capability !== capability) return false;
+    if (opts.provider && p.provider !== opts.provider) return false;
+    if (opts.capability && p.capability !== opts.capability) return false;
+    if (opts.supportsParam && !supportsCapabilityParam(p, opts.supportsParam)) return false;
+    if (opts.supportsInput && !supportsCapabilityInput(p, opts.supportsInput)) return false;
     return true;
   });
+}
+
+function toCompactPreset(preset: ModelPreset): {
+  key: string;
+  apiId: number;
+  provider: ModelPreset["provider"];
+  capability: ModelPreset["capability"];
+  inputs: ModelPreset["capSpec"]["inputs"];
+  supportsParams: string[];
+  summary: string;
+} {
+  return {
+    key: preset.key,
+    apiId: preset.apiId,
+    provider: preset.provider,
+    capability: preset.capability,
+    inputs: preset.capSpec.inputs,
+    supportsParams: Object.keys(preset.capSpec.params),
+    summary: preset.capSpec.summary,
+  };
 }
 
 function addPresetCommands(program: Command): void {
@@ -152,13 +191,23 @@ function addPresetCommands(program: Command): void {
     .option("--type <type>", "filter by type: image | video")
     .option("--provider <provider>", "filter by provider")
     .option("--capability <capability>", "filter by capability")
-    .action((opts: { type?: string; provider?: string; capability?: string }) => {
-      printOutput(filterPresets(opts.type as MediaKind | undefined, opts.provider, opts.capability));
+    .option("--supports-param <name>", "filter presets that support a specific parameter")
+    .option(
+      "--supports-input <input>",
+      `filter presets that support a specific input: ${CAPABILITY_INPUT_TYPES.join(" | ")}`
+    )
+    .option("--compact", "return compact view (summary + supported inputs/params)")
+    .action((opts: PresetListOptions) => {
+      if (opts.supportsInput && !CAPABILITY_INPUT_TYPES.includes(opts.supportsInput as (typeof CAPABILITY_INPUT_TYPES)[number])) {
+        throw new Error(`invalid --supports-input: ${opts.supportsInput}`);
+      }
+      const results = filterPresets(opts);
+      printOutput(opts.compact ? results.map(toCompactPreset) : results);
     });
 
   cmd
-    .command("show")
-    .description("show preset detail")
+    .command("get")
+    .description("get full preset detail with capSpec")
     .argument("<key>", "preset key")
     .action((key: string) => {
       const p = getPresetByKey(key);

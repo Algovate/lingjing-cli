@@ -57,9 +57,25 @@ lingjing preset list --type image
 # Filter by provider (e.g., kling, doubao, vidu, hailuo)
 lingjing preset list --provider kling --type video
 
-# View details of a specific preset
-lingjing preset show doubao-seedream-4-0
+# Find presets by supported parameter / input type
+lingjing preset list --supports-param multi_shot --supports-input image_url
+
+# Compact browsing output
+lingjing preset list --compact
+
+# Get a single preset with full capSpec
+lingjing preset get kling-v3-ttv
 ```
+
+### 1.1 Capability Reference (Machine-readable First)
+
+Each preset now has a `capSpec` with stable structure:
+
+- `summary`: short capability summary
+- `inputs`: supported input types (`text_prompt`, `image_url`, `image_list`, `ref_video`)
+- `params`: parameter specs (`type`, `required`, `default`, `enum`, `range`, `description`)
+- `constraints`: model-specific limitations and conditional support
+- `examples`: minimal example payload fragments
 
 ### 2. Image Generation (`image`)
 
@@ -183,7 +199,9 @@ claude mcp add lingjing-cli -- npx -y lingjing-cli mcp
 
 | Tool | Description |
 |---|---|
-| `list_presets` | List and find available models, can be filtered by `capability` and `provider`. |
+| `list_presets` | List presets with full capability specs; supports capability/provider/input/param filters and `compact` mode. |
+| `get_preset_capability` | Get full capability spec for one preset. |
+| `find_presets_by_capability` | Find presets by supported input/parameter capability (`compact` optional). |
 | `generate_image` | Submit an image generation task and wait for the result automatically. |
 | `generate_video` | Submit a video generation task and wait for the result automatically (default timeout 600s). |
 
@@ -192,6 +210,23 @@ claude mcp add lingjing-cli -- npx -y lingjing-cli mcp
 |---|---|---|
 | `capability` | `image` \| `text-to-video` \| `image-to-video` \| `reference-to-video` | Filter by capability (optional) |
 | `provider` | `doubao` \| `hailuo` \| `kling` \| `paiwo` \| `vidu` | Filter by provider (optional) |
+| `supportsParam` | string | Filter by supported parameter name (optional) |
+| `supportsInput` | `text_prompt` \| `image_url` \| `image_list` \| `ref_video` | Filter by supported input type (optional) |
+| `compact` | boolean | Compact output mode (default: `false`) |
+
+#### `get_preset_capability`
+| Parameter | Type | Description |
+|---|---|---|
+| `preset` | string | Preset key, e.g., `kling-v3-ttv` |
+
+#### `find_presets_by_capability`
+| Parameter | Type | Description |
+|---|---|---|
+| `capability` | `image` \| `text-to-video` \| `image-to-video` \| `reference-to-video` | Filter by capability (optional) |
+| `provider` | `doubao` \| `hailuo` \| `kling` \| `paiwo` \| `vidu` | Filter by provider (optional) |
+| `supportsParam` | string | Filter by supported parameter name (optional) |
+| `supportsInput` | `text_prompt` \| `image_url` \| `image_list` \| `ref_video` | Filter by supported input type (optional) |
+| `compact` | boolean | Compact output mode (default: `false`) |
 
 #### `generate_image` / `generate_video`
 | Parameter | Type | Default | Description |
